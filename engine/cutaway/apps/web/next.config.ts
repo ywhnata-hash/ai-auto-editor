@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // GitHub Pages serves this project under /ai-auto-editor; local development stays at the root.
+  basePath: process.env.GITHUB_ACTIONS ? "/ai-auto-editor" : "",
   /**
    * The editor is entirely client-side — no route handlers, no server actions,
    * no middleware, and no server image optimisation. Exporting it as static
