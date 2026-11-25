@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { AudioWaveform, Loader2, ScanSearch } from "lucide-react";
+import { AudioWaveform, Check, Loader2, ScanSearch, X } from "lucide-react";
 import { Button } from "@cutaway/ui";
 import { useShallow } from "zustand/react/shallow";
 import { useEditorStore } from "@/state/editorStore";
@@ -71,6 +71,7 @@ export function AutoEditPanel() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pauses, setPauses] = useState<Pause[]>([]);
+  const [decisions, setDecisions] = useState<Record<number, "cut" | "keep">>({});
   const [threshold, setThreshold] = useState(0.012);
   const [minDuration, setMinDuration] = useState(0.7);
 
@@ -84,6 +85,7 @@ export function AutoEditPanel() {
     setBusy(true);
     setError(null);
     setPauses([]);
+    setDecisions({});
     let context: AudioContext | null = null;
     try {
       const blob = await store().get(source.source.key);
@@ -92,6 +94,7 @@ export function AutoEditPanel() {
       context = new AudioContextCtor();
       const decoded = await context.decodeAudioData(await blob.arrayBuffer());
       setPauses(findPauses(decoded, threshold, minDuration));
+      setDecisions({});
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Audio analysis failed.");
     } finally {
@@ -168,19 +171,51 @@ export function AutoEditPanel() {
       {error && <p className="text-2xs text-danger">{error}</p>}
       {pauses.length > 0 && (
         <div className="flex flex-col gap-1.5">
-          <p className="text-2xs text-text-secondary">{pauses.length} pause suggestions found</p>
-          {pauses.map((pause, index) => (
-            <button
-              key={`${pause.startSeconds}-${pause.endSeconds}`}
-              onClick={() => jumpTo(pause.startSeconds)}
-              className="border-border-subtle bg-surface-raised hover:border-accent flex items-center justify-between rounded-sm border p-2 text-left"
-            >
-              <span className="text-2xs text-text-primary">Pause {index + 1}</span>
-              <span className="text-2xs tabular text-text-tertiary">
-                {formatTime(pause.startSeconds)}–{formatTime(pause.endSeconds)}
-              </span>
-            </button>
-          ))}
+          <div className="flex items-center justify-between">
+            <p className="text-2xs text-text-secondary">{pauses.length} pause suggestions</p>
+            <p className="text-2xs text-text-tertiary">
+              {Object.values(decisions).filter((decision) => decision === "cut").length} marked to cut
+            </p>
+          </div>
+          <p className="text-2xs text-text-tertiary">
+            Review each result. Mark only genuine pauses for cutting; keep anything that contains speech or useful sound.
+          </p>
+          {pauses.map((pause, index) => {
+            const decision = decisions[index];
+            return (
+              <div
+                key={`${pause.startSeconds}-${pause.endSeconds}`}
+                className="border-border-subtle bg-surface-raised flex flex-col gap-2 rounded-sm border p-2"
+              >
+                <button
+                  onClick={() => jumpTo(pause.startSeconds)}
+                  className="flex items-center justify-between text-left"
+                  title="Jump to this source timestamp"
+                >
+                  <span className="text-2xs text-text-primary">Pause {index + 1}</span>
+                  <span className="text-2xs tabular text-text-tertiary">
+                    {formatTime(pause.startSeconds)}–{formatTime(pause.endSeconds)}
+                  </span>
+                </button>
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() => setDecisions((current) => ({ ...current, [index]: "cut" }))}
+                    aria-pressed={decision === "cut"}
+                    className={`flex flex-1 items-center justify-center gap-1 rounded-xs border px-2 py-1 text-2xs ${decision === "cut" ? "border-accent bg-accent-muted text-accent" : "border-border-subtle text-text-secondary hover:bg-surface-overlay"}`}
+                  >
+                    <Check size={12} /> Mark to cut
+                  </button>
+                  <button
+                    onClick={() => setDecisions((current) => ({ ...current, [index]: "keep" }))}
+                    aria-pressed={decision === "keep"}
+                    className={`flex flex-1 items-center justify-center gap-1 rounded-xs border px-2 py-1 text-2xs ${decision === "keep" ? "border-border-strong bg-surface-overlay text-text-primary" : "border-border-subtle text-text-secondary hover:bg-surface-overlay"}`}
+                  >
+                    <X size={12} /> Keep
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
       {pauses.length === 0 && !busy && !error && (
