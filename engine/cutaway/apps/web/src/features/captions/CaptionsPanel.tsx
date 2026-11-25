@@ -71,7 +71,7 @@ export function CaptionsPanel() {
       if (!blob) throw new Error("Media bytes not found");
 
       const provider = getTranscriptionProvider();
-      const { words, language } = await provider.transcribe({
+      const { words, language: detectedLanguage } = await provider.transcribe({
         media: blob,
         language,
         frameRate: project.settings.frameRate,
@@ -85,7 +85,7 @@ export function CaptionsPanel() {
       const track: CaptionTrackData = {
         id: createId("captions"),
         sourceMediaId: audioAsset.id,
-        language,
+        language: detectedLanguage,
         blocks,
         presetId: DEFAULT_CAPTION_PRESET_ID,
       };
