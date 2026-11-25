@@ -93,6 +93,8 @@ export interface EditorState {
    */
   updateClip: (clipId: Id, updater: (clip: Clip) => Clip, label: string, mergeKey?: string) => void;
   splitAtPlayhead: () => void;
+  /** Removes timeline ranges across every track as one synchronized undo step. */
+  applyTimelineCuts: (ranges: Array<{ startFrame: Frame; endFrame: Frame }>) => void;
   deleteSelected: () => void;
   setTrackFlag: (trackId: Id, flag: "locked" | "hidden" | "muted", value: boolean) => void;
   /** Adds an empty track. Video tracks go on top (front); audio tracks at the bottom. */
@@ -314,6 +316,106 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
         withDerived({ ...state.project, entities: { ...state.project.entities, clips } }),
         "Split clip",
       );
+    }),
+
+  applyTimelineCuts: (ranges) =>
+    set((state) => {
+      const clips = Object.values(state.project.entities.clips);
+      if (ranges.length === 0 || clips.length === 0) return state;
+
+      // Normalize overlapping ranges before editing. The operation is global
+      // to the sequence, so picture, sound, captions-as-clips and overlays
+      // retain sync rather than rippling independently per track.
+      const sorted = ranges
+        .map((range) => ({
+          startFrame: Math.max(0, Math.round(range.startFrame)),
+          endFrame: Math.max(0, Math.round(range.endFrame)),
+        }))
+        .filter((range) => range.endFrame > range.startFrame)
+        .sort((a, b) => a.startFrame - b.startFrame);
+      const merged: Array<{ startFrame: number; endFrame: number }> = [];
+      for (const range of sorted) {
+        const previous = merged[merged.length - 1];
+        if (previous && range.startFrame <= previous.endFrame) {
+          previous.endFrame = Math.max(previous.endFrame, range.endFrame);
+        } else {
+          merged.push({ ...range });
+        }
+      }
+      if (merged.length === 0) return state;
+
+      const tracks = state.project.entities.tracks;
+      // Refuse edits that would move or split locked material/tracks.
+      for (const clip of clips) {
+        const track = tracks[clip.trackId];
+        const clipEnd = clip.startFrame + clip.durationFrames;
+        const intersects = merged.some((range) =>
+          range.startFrame < clipEnd && range.endFrame > clip.startFrame,
+        );
+        const shifts = merged.some((range) => range.endFrame <= clip.startFrame);
+        if ((intersects || shifts) && (clip.locked || track?.locked)) return state;
+      }
+
+      const removedBefore = (frame: number) =>
+        merged.reduce((total, range) =>
+          total + Math.max(0, Math.min(frame, range.endFrame) - range.startFrame), 0);
+
+      const nextClips: Record<Id, Clip> = {};
+      for (const clip of clips) {
+        const originalStart = clip.startFrame;
+        const originalEnd = originalStart + clip.durationFrames;
+        const kept: Array<{ start: number; end: number }> = [];
+        let cursor = originalStart;
+
+        for (const range of merged) {
+          if (range.endFrame <= cursor) continue;
+          if (range.startFrame >= originalEnd) break;
+          if (range.startFrame > cursor) {
+            kept.push({ start: cursor, end: Math.min(range.startFrame, originalEnd) });
+          }
+          cursor = Math.max(cursor, range.endFrame);
+          if (cursor >= originalEnd) break;
+        }
+        if (cursor < originalEnd) kept.push({ start: cursor, end: originalEnd });
+
+        kept.forEach((segment, index) => {
+          const offset = segment.start - originalStart;
+          const durationFrames = segment.end - segment.start;
+          if (durationFrames < 1) return;
+          let content = clip.content;
+          if (content.kind === "video" || content.kind === "audio") {
+            content = {
+              ...content,
+              sourceInFrame: content.sourceInFrame + Math.round(offset * content.speed),
+            };
+          }
+          const id = index === 0 ? clip.id : createId("clip");
+          nextClips[id] = {
+            ...clip,
+            id,
+            startFrame: segment.start - removedBefore(segment.start),
+            durationFrames,
+            content,
+            transitionIn: index === 0 ? clip.transitionIn : null,
+          };
+        });
+      }
+
+      if (Object.keys(nextClips).length === Object.keys(state.project.entities.clips).length &&
+          clips.every((clip) => nextClips[clip.id]?.startFrame === clip.startFrame &&
+            nextClips[clip.id]?.durationFrames === clip.durationFrames)) return state;
+
+      return {
+        selectedClipIds: [],
+        ...commit(
+          state,
+          withDerived({
+            ...state.project,
+            entities: { ...state.project.entities, clips: nextClips },
+          }),
+          "Apply Auto Edit cuts",
+        ),
+      };
     }),
 
   deleteSelected: () =>
