@@ -101,16 +101,25 @@ export function AutoEditPanel() {
   }, [source, store, threshold, minDuration]);
 
   const jumpTo = (seconds: number) => {
-    const clip = clips.find((item) =>
-      (item.content.kind === "video" || item.content.kind === "audio") &&
-      item.content.mediaId === source?.id,
-    );
-    if (!clip) {
-      setPlayhead(Math.round(seconds * fps));
-      return;
-    }
+    if (!source) return;
+    const sourceFrame = Math.round(seconds * fps);
+    const clip = clips.find((item) => {
+      if (
+        (item.content.kind !== "video" && item.content.kind !== "audio") ||
+        item.content.mediaId !== source.id
+      ) return false;
+      const speed = item.content.speed || 1;
+      const sourceStart = item.content.sourceInFrame;
+      const sourceEnd = sourceStart + Math.ceil(item.durationFrames * speed);
+      return sourceFrame >= sourceStart && sourceFrame < sourceEnd;
+    });
+
+    // A source-media timestamp is not a timeline timestamp: clips may be
+    // trimmed, retimed, or placed later in the sequence.
+    if (!clip || (clip.content.kind !== "video" && clip.content.kind !== "audio")) return;
+    const timelineOffset = (sourceFrame - clip.content.sourceInFrame) / (clip.content.speed || 1);
     selectClips([clip.id]);
-    setPlayhead(clip.startFrame + Math.round(seconds * fps));
+    setPlayhead(clip.startFrame + Math.round(timelineOffset));
   };
 
   return (
