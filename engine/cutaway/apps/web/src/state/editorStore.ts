@@ -361,6 +361,30 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
         merged.reduce((total, range) =>
           total + Math.max(0, Math.min(frame, range.endFrame) - range.startFrame), 0);
 
+      const nextCaptionTracks = Object.fromEntries(
+        Object.entries(state.project.entities.captionTracks).map(([trackId, track]) => {
+          const blocks = track.blocks.flatMap((block) => {
+            const words = block.words
+              .filter((word) => !merged.some((range) =>
+                range.startFrame < word.endFrame && range.endFrame > word.startFrame,
+              ))
+              .map((word) => ({
+                ...word,
+                startFrame: word.startFrame - removedBefore(word.startFrame),
+                endFrame: word.endFrame - removedBefore(word.endFrame),
+              }));
+            if (words.length === 0) return [];
+            return [{
+              ...block,
+              words,
+              startFrame: Math.min(...words.map((word) => word.startFrame)),
+              endFrame: Math.max(...words.map((word) => word.endFrame)),
+            }];
+          });
+          return [trackId, { ...track, blocks }];
+        }),
+      );
+
       const nextClips: Record<Id, Clip> = {};
       for (const clip of clips) {
         const originalStart = clip.startFrame;
@@ -413,7 +437,11 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
           state,
           withDerived({
             ...state.project,
-            entities: { ...state.project.entities, clips: nextClips },
+            entities: {
+              ...state.project.entities,
+              clips: nextClips,
+              captionTracks: nextCaptionTracks,
+            },
           }),
           "Apply Auto Edit cuts",
         ),
