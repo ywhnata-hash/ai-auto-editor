@@ -75,8 +75,8 @@ def analyze_worker(pid):
         audio=folder/"audio.wav"
         run(["ffmpeg","-y","-i",str(src),"-vn","-ac","1","-ar","16000",str(audio)])
         p=subprocess.run(["ffmpeg","-hide_banner","-i",str(src),"-af","silencedetect=noise=-35dB:d=0.8","-f","null","-"],capture_output=True,text=True)
-        starts=[float(x) for x in re.findall(r"silence_start:\\s*([0-9.]+)",p.stderr)]
-        ends=[float(x) for x in re.findall(r"silence_end:\\s*([0-9.]+)",p.stderr)]
+        starts=[float(x) for x in re.findall(r"silence_start:\s*([0-9.]+)",p.stderr)]
+        ends=[float(x) for x in re.findall(r"silence_end:\s*([0-9.]+)",p.stderr)]
         decisions=[]
         for a,b in zip(starts,ends):
             if b-a >= 1.0:
@@ -154,16 +154,16 @@ def export_project(pid: str, settings: ExportSettings):
         f"hue=h={settings.warmth*8:.2f},unsharp=5:5:{settings.sharpen:.2f}:5:5:0")
     if settings.vignette > 0:
         vf += f",vignette=PI/{max(1.0,2.0+settings.vignette*6):.2f}"
-    fade=min(settings.fade_seconds, max(0.0,data["duration"]/2))
+    edited_duration=sum(b-a for a,b in keep)\n    fade=min(settings.fade_seconds, max(0.0,edited_duration/2))
     if fade > 0:
-        vf += f",fade=t=in:st=0:d={fade:.3f},fade=t=out:st={max(0,data['duration']-fade):.3f}:d={fade:.3f}"
+        vf += f",fade=t=in:st=0:d={fade:.3f},fade=t=out:st={max(0,edited_duration-fade):.3f}:d={fade:.3f}"
     filters.append(f"[vcat]{vf}[vout]")
     if data.get("has_audio", True):
         af=[]
         if settings.voice_clarity: af += ["highpass=f=75","lowpass=f=15000","acompressor=threshold=0.125:ratio=2:attack=20:release=250"]
         if settings.noise_reduction: af += ["afftdn=nf=-25"]
         af += ["loudnorm=I=-16:TP=-1.5:LRA=11"]
-        if fade > 0: af += [f"afade=t=in:st=0:d={fade:.3f}",f"afade=t=out:st={max(0,data['duration']-fade):.3f}:d={fade:.3f}"]
+        if fade > 0: af += [f"afade=t=in:st=0:d={fade:.3f}",f"afade=t=out:st={max(0,edited_duration-fade):.3f}:d={fade:.3f}"]
         filters.append(f"[acat]{','.join(af)}[aout]")
     out=folder/"final.mp4"
     cmd=["ffmpeg","-y","-i",str(src),"-filter_complex",";".join(filters),"-map","[vout]"]
