@@ -140,7 +140,7 @@ self.onmessage = async (event: MessageEvent<InboundMessage>) => {
       stride_length_s: 5,
       // English-only models reject language/task options, so only pass them
       // when the model is multilingual (its id lacks the `.en` suffix).
-      ...(modelId.endsWith(".en") ? {} : { language, task: "transcribe" }),
+      ...(modelId.endsWith(".en") ? {} : { ...(language ? { language } : {}), task: "transcribe" }),
       streamer,
     });
 
