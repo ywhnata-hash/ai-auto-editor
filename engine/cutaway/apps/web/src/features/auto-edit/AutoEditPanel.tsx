@@ -116,12 +116,13 @@ export function AutoEditPanel() {
     if (!source || sourceClips.length !== 1) return;
     const clip = sourceClips[0]!;
     if (clip.content.kind !== "video" && clip.content.kind !== "audio") return;
-    const speed = clip.content.speed || 1;
+    const clipContent = clip.content;
+    const speed = clipContent.speed || 1;
     const selectedRanges = pauses.flatMap((pause, index) => {
       if (decisions[index] !== "cut") return [];
       const sourceStart = Math.round(pause.startSeconds * fps);
       const sourceEnd = Math.round(pause.endSeconds * fps);
-      const clipSourceStart = clip.content.sourceInFrame;
+      const clipSourceStart = clipContent.sourceInFrame;
       const clipSourceEnd = clipSourceStart + Math.ceil(clip.durationFrames * speed);
       const start = Math.max(sourceStart, clipSourceStart);
       const end = Math.min(sourceEnd, clipSourceEnd);
