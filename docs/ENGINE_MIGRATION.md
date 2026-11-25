@@ -83,5 +83,7 @@ Upstream references:
 
 - Migration branch created from `desktop-foundation`.
 - Upstream selected for technical evaluation.
-- No upstream source has been copied into this repository yet.
-- No production deployment has been replaced.
+- Vendored the upstream Cutaway source into `engine/cutaway/` (219 UTF-8 source/config/documentation files; binary favicon intentionally omitted).
+- Preserved the upstream MIT `LICENSE` and attribution files in `engine/cutaway/`.
+- Rebranded the browser editor metadata and top toolbar as FrameForge AI.
+- The upstream code has not yet been installed, built, typechecked, or browser-tested in this environment; deployment has not been replaced.
