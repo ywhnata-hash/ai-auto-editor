@@ -1,3 +1,32 @@
+# FrameForge AI — Video Editor
+
+> The original MVP is retained in this repository. A full open-source nonlinear editing engine is now vendored under `engine/cutaway/` on the `cutaway-engine-migration` branch.
+
+## Run the new editing engine
+
+Requirements: Node.js 20+ and pnpm 10+.
+
+```bash
+cd engine/cutaway
+pnpm install
+pnpm dev
+```
+
+Open the local URL printed by Next.js (normally http://localhost:3000).
+
+The imported editor includes a multi-track timeline, WebGL preview, media import, captions with on-device Whisper transcription, color/effects, masks, transitions, keyframes, undo/redo, and WebCodecs export. These are upstream project capabilities and still require local verification before production use.
+
+## Migration status
+
+- Upstream: [S07K/Cutaway](https://github.com/S07K/cutaway)
+- Upstream license: MIT; original license and attribution are preserved in `engine/cutaway/LICENSE`.
+- Browser branding has been changed to FrameForge AI.
+- The imported engine is isolated under `engine/cutaway/`; the previous MVP remains untouched.
+- CI checks are configured in `.github/workflows/frameforge-engine-ci.yml`.
+- This branch is not yet merged into `main` or deployed. Build and browser verification are still required.
+
+---
+
 # AI Auto Editor — MVP (Social / Arabic / Auto Resolution)
 
 A zero-cost, local-first starter project. It is a working scaffold, not a finished AI editor.
