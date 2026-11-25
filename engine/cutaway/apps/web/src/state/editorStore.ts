@@ -94,7 +94,7 @@ export interface EditorState {
   updateClip: (clipId: Id, updater: (clip: Clip) => Clip, label: string, mergeKey?: string) => void;
   splitAtPlayhead: () => void;
   /** Removes timeline ranges across every track as one synchronized undo step. */
-  applyTimelineCuts: (ranges: Array<{ startFrame: Frame; endFrame: Frame }>) => void;
+  applyTimelineCuts: (ranges: Array<{ startFrame: Frame; endFrame: Frame }>) => boolean;
   deleteSelected: () => void;
   setTrackFlag: (trackId: Id, flag: "locked" | "hidden" | "muted", value: boolean) => void;
   /** Adds an empty track. Video tracks go on top (front); audio tracks at the bottom. */
@@ -318,7 +318,8 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
       );
     }),
 
-  applyTimelineCuts: (ranges) =>
+  applyTimelineCuts: (ranges) => {
+    let applied = false;
     set((state) => {
       const clips = Object.values(state.project.entities.clips);
       if (ranges.length === 0 || clips.length === 0) return state;
@@ -405,6 +406,7 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
           clips.every((clip) => nextClips[clip.id]?.startFrame === clip.startFrame &&
             nextClips[clip.id]?.durationFrames === clip.durationFrames)) return state;
 
+      applied = true;
       return {
         selectedClipIds: [],
         ...commit(
@@ -416,7 +418,9 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
           "Apply Auto Edit cuts",
         ),
       };
-    }),
+    });
+    return applied;
+  },
 
   deleteSelected: () =>
     set((state) => {
