@@ -67,6 +67,7 @@ export function AutoEditPanel() {
   const fps = useEditorStore((state) => state.project.settings.frameRate);
   const setPlayhead = useEditorStore((state) => state.setPlayhead);
   const selectClips = useEditorStore((state) => state.selectClips);
+  const applyTimelineCuts = useEditorStore((state) => state.applyTimelineCuts);
   const { store } = useMediaImportContext();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -102,6 +103,40 @@ export function AutoEditPanel() {
       setBusy(false);
     }
   }, [source, store, threshold, minDuration]);
+
+  const sourceClips = useMemo(
+    () => clips.filter((clip) =>
+      (clip.content.kind === "video" || clip.content.kind === "audio") &&
+      clip.content.mediaId === source?.id,
+    ),
+    [clips, source],
+  );
+
+  const applySelectedCuts = () => {
+    if (!source || sourceClips.length !== 1) return;
+    const clip = sourceClips[0]!;
+    if (clip.content.kind !== "video" && clip.content.kind !== "audio") return;
+    const speed = clip.content.speed || 1;
+    const selectedRanges = pauses.flatMap((pause, index) => {
+      if (decisions[index] !== "cut") return [];
+      const sourceStart = Math.round(pause.startSeconds * fps);
+      const sourceEnd = Math.round(pause.endSeconds * fps);
+      const clipSourceStart = clip.content.sourceInFrame;
+      const clipSourceEnd = clipSourceStart + Math.ceil(clip.durationFrames * speed);
+      const start = Math.max(sourceStart, clipSourceStart);
+      const end = Math.min(sourceEnd, clipSourceEnd);
+      if (end <= start) return [];
+      return [{
+        startFrame: clip.startFrame + Math.floor((start - clipSourceStart) / speed),
+        endFrame: clip.startFrame + Math.ceil((end - clipSourceStart) / speed),
+      }];
+    });
+    if (selectedRanges.length === 0) return;
+    applyTimelineCuts(selectedRanges);
+    setPauses([]);
+    setDecisions({});
+    setError(null);
+  };
 
   const jumpTo = (seconds: number) => {
     if (!source) return;
@@ -216,6 +251,27 @@ export function AutoEditPanel() {
               </div>
             );
           })}
+        </div>
+      )}
+      {pauses.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          {sourceClips.length === 1 ? (
+            <Button
+              size="sm"
+              className="w-full"
+              disabled={!Object.values(decisions).some((decision) => decision === "cut")}
+              onClick={applySelectedCuts}
+            >
+              Apply selected cuts to timeline
+            </Button>
+          ) : (
+            <p className="text-2xs text-text-tertiary">
+              To apply cuts safely, this source must appear in exactly one timeline clip. Found {sourceClips.length}.
+            </p>
+          )}
+          <p className="text-2xs text-text-tertiary">
+            All tracks ripple together. The operation is one undo step; locked material that would move or split prevents the edit.
+          </p>
         </div>
       )}
       {pauses.length === 0 && !busy && !error && (
