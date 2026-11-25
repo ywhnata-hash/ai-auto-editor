@@ -45,6 +45,7 @@ export function CaptionsPanel() {
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
+  const [language, setLanguage] = useState("ar");
 
   // Promote real on-device Whisper over the placeholder once we're in the
   // browser (it needs Worker + WebAudio). The stub stays as the fallback.
@@ -72,7 +73,7 @@ export function CaptionsPanel() {
       const provider = getTranscriptionProvider();
       const { words, language } = await provider.transcribe({
         media: blob,
-        language: "en",
+        language,
         frameRate: project.settings.frameRate,
         onProgress: setProgress,
       });
@@ -175,6 +176,19 @@ export function CaptionsPanel() {
           {audioAsset ? (
             <>
               <p className="text-text-secondary text-xs">Generate captions from your audio.</p>
+              <label className="flex w-full flex-col gap-1 text-left">
+                <span className="text-text-tertiary text-2xs">Speech language</span>
+                <select
+                  aria-label="Speech language"
+                  value={language}
+                  onChange={(event) => setLanguage(event.target.value)}
+                  className="bg-surface-input text-text-primary rounded-xs px-2 py-1.5 text-xs focus:outline-none"
+                >
+                  <option value="ar">Arabic</option>
+                  <option value="en">English</option>
+                  <option value="">Auto-detect</option>
+                </select>
+              </label>
               <Button size="sm" variant="secondary" disabled={busy} onClick={() => void generate()}>
                 {busy ? (
                   <>
