@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Captions, FolderOpen, type LucideIcon } from "lucide-react";
+import { AudioWaveform, Captions, FolderOpen, type LucideIcon } from "lucide-react";
 import { Panel, cn } from "@cutaway/ui";
 import { MediaPanel } from "@/features/media/MediaPanel";
 import { CaptionsPanel } from "@/features/captions/CaptionsPanel";
+import { AutoEditPanel } from "@/features/auto-edit/AutoEditPanel";
 
 /**
  * The left rail and its active panel.
@@ -28,6 +29,7 @@ interface SidebarSection {
 const SECTIONS: SidebarSection[] = [
   { id: "media", label: "Media", icon: FolderOpen },
   { id: "captions", label: "Captions", icon: Captions },
+  { id: "auto-edit", label: "Auto Edit", icon: AudioWaveform },
 ];
 
 export function LeftSidebar() {
@@ -67,7 +69,7 @@ export function LeftSidebar() {
 
       <div className="min-w-0 flex-1">
         <Panel title={active.label} className="scrollbar-slim">
-          {active.id === "media" ? <MediaPanel /> : <CaptionsPanel />}
+          {active.id === "media" ? <MediaPanel /> : active.id === "captions" ? <CaptionsPanel /> : <AutoEditPanel />}
         </Panel>
       </div>
     </div>
