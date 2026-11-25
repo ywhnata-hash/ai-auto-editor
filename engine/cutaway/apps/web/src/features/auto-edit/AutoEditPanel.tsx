@@ -132,7 +132,11 @@ export function AutoEditPanel() {
       }];
     });
     if (selectedRanges.length === 0) return;
-    applyTimelineCuts(selectedRanges);
+    const applied = applyTimelineCuts(selectedRanges);
+    if (!applied) {
+      setError("Cuts were not applied. A locked clip or track would be affected, or the selected ranges no longer overlap the timeline.");
+      return;
+    }
     setPauses([]);
     setDecisions({});
     setError(null);
