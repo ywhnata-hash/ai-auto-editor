@@ -2,7 +2,7 @@ name: FrameForge editor engine CI
 
 on:
   push:
-    branches: [cutaway-engine-migration]
+    branches: [main, cutaway-engine-migration]
     paths:
       - "engine/cutaway/**"
       - ".github/workflows/frameforge-engine-ci.yml"
@@ -32,3 +32,10 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+      - name: Upload static editor build
+        uses: actions/upload-artifact@v4
+        with:
+          name: frameforge-web-static
+          path: engine/cutaway/apps/web/out/
+          if-no-files-found: error
+          retention-days: 14
