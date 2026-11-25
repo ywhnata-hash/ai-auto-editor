@@ -34,7 +34,7 @@ export function TopToolbar() {
         <div className="bg-accent text-accent-text grid h-6 w-6 place-items-center rounded-sm text-xs font-bold">
           C
         </div>
-        <span className="text-text-primary text-sm font-semibold">Cutaway</span>
+        <span className="text-text-primary text-sm font-semibold">FrameForge AI</span>
       </div>
 
       <div className="bg-border-subtle mx-1 h-5 w-px" />
