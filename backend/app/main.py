@@ -154,7 +154,8 @@ def export_project(pid: str, settings: ExportSettings):
         f"hue=h={settings.warmth*8:.2f},unsharp=5:5:{settings.sharpen:.2f}:5:5:0")
     if settings.vignette > 0:
         vf += f",vignette=PI/{max(1.0,2.0+settings.vignette*6):.2f}"
-    edited_duration=sum(b-a for a,b in keep)\n    fade=min(settings.fade_seconds, max(0.0,edited_duration/2))
+    edited_duration=sum(b-a for a,b in keep)
+    fade=min(settings.fade_seconds, max(0.0,edited_duration/2))
     if fade > 0:
         vf += f",fade=t=in:st=0:d={fade:.3f},fade=t=out:st={max(0,edited_duration-fade):.3f}:d={fade:.3f}"
     filters.append(f"[vcat]{vf}[vout]")
@@ -186,7 +187,7 @@ def export_project(pid: str, settings: ExportSettings):
     lines=[]
     for i,s in enumerate(data.get("transcript",[]),1):
         lines += [str(i),f"{ts(s['start'])} --> {ts(s['end'])}",s["text"].strip(),""]
-    (folder/"captions.srt").write_text("\\n".join(lines),encoding="utf-8")
+    (folder/"captions.srt").write_text("\n".join(lines),encoding="utf-8")
     return {"video":"/api/projects/"+pid+"/download/final.mp4",
             "project":"/api/projects/"+pid+"/download/editable-project.json",
             "srt":"/api/projects/"+pid+"/download/captions.srt","kept_segments":len(keep),
