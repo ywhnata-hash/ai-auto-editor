@@ -9,8 +9,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Cutaway",
-  description: "Open-source, local-first video editor for creators.",
+  title: "FrameForge AI",
+  description: "FrameForge AI — a local-first professional video editor with an AI-assisted editing workflow.",
 };
 
 export const viewport: Viewport = {
