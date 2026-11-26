@@ -17,7 +17,7 @@ const SAMPLE_RATE = 16_000;
  * whole phrases, so word-level highlighting requires this variant. Small enough
  * to download once, accurate enough for captions the user reviews.
  */
-const DEFAULT_MODEL = "onnx-community/whisper-base_timestamped";
+const DEFAULT_MODEL = "onnx-community/whisper-tiny_timestamped";
 
 /** The download is the first half of the bar, inference the second. */
 const DOWNLOAD_SHARE = 0.5;
