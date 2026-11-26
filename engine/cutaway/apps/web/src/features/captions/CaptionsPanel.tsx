@@ -14,7 +14,7 @@ import { Button, cn } from "@cutaway/ui";
 import { useShallow } from "zustand/react/shallow";
 import { useEditorStore } from "@/state/editorStore";
 import { useMediaImportContext } from "@/features/media/MediaImportProvider";
-import { getTranscriptionProvider, setTranscriptionProvider } from "./transcription";
+import { setTranscriptionProvider } from "./transcription";
 import { WhisperTranscriptionProvider } from "./WhisperTranscriptionProvider";
 import { CaptionEditor } from "./CaptionEditor";
 import type { EditorUpdateCaptionTrack } from "./types";
@@ -46,6 +46,7 @@ export function CaptionsPanel() {
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [language, setLanguage] = useState("ar");
+  const [modelSpeed, setModelSpeed] = useState<"fast" | "accurate">("fast");
 
   // Promote real on-device Whisper over the placeholder once we're in the
   // browser (it needs Worker + WebAudio). The stub stays as the fallback.
@@ -70,7 +71,11 @@ export function CaptionsPanel() {
       const blob = await store().get(audioAsset.source.key);
       if (!blob) throw new Error("Media bytes not found");
 
-      const provider = getTranscriptionProvider();
+      const provider = new WhisperTranscriptionProvider(
+        modelSpeed === "fast"
+          ? "onnx-community/whisper-tiny_timestamped"
+          : "onnx-community/whisper-base_timestamped",
+      );
       const { words, language: detectedLanguage } = await provider.transcribe({
         media: blob,
         language,
@@ -95,7 +100,7 @@ export function CaptionsPanel() {
     } finally {
       setBusy(false);
     }
-  }, [audioAsset, store, project.settings.frameRate, upsertCaptionTrack]);
+  }, [audioAsset, store, project.settings.frameRate, upsertCaptionTrack, language, modelSpeed]);
 
   // Manually add a caption: type text, and it becomes styled blocks at the
   // playhead — no transcription needed. Words are timed evenly, and split into
@@ -187,6 +192,19 @@ export function CaptionsPanel() {
                   <option value="ar">Arabic</option>
                   <option value="en">English</option>
                   <option value="">Auto-detect</option>
+                </select>
+              </label>
+              <label className="flex w-full flex-col gap-1 text-left">
+                <span className="text-text-tertiary text-2xs">Transcription model</span>
+                <select
+                  aria-label="Transcription model"
+                  value={modelSpeed}
+                  onChange={(event) => setModelSpeed(event.target.value as "fast" | "accurate")}
+                  className="bg-surface-input text-text-primary rounded-xs px-2 py-1.5 text-xs focus:outline-none"
+                  disabled={busy}
+                >
+                  <option value="fast">Fast — Whisper Tiny (recommended)</option>
+                  <option value="accurate">Higher accuracy — Whisper Base</option>
                 </select>
               </label>
               <Button size="sm" variant="secondary" disabled={busy} onClick={() => void generate()}>
